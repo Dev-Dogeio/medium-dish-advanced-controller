@@ -1,0 +1,124 @@
+brdns d4 2
+s d4 Mode 10
+move r9 0
+move r8 77.5
+move r7 179.5
+brdns d4 2
+s d4 Setting STR("RESET")
+s d0 Activate 0
+s d0 BestContactFilter -1
+s d0 Horizontal r9
+s d0 Vertical r8
+yield
+jal 35
+l r0 d0 Idle
+beqz r0 11
+s d0 Horizontal r7
+brdns d4 2
+s d4 Setting STR("SWEEP")
+s d0 Setting 525
+yield
+jal 35
+jal 23
+j 16
+l r9 d0 Horizontal
+l r8 d0 Vertical
+bap r8 2.5 0.2 0
+l r0 d0 Idle
+beqz r0 ra
+bap r9 180 0.1 33
+sweep_step_v:
+add r8 r8 -25
+bltz r8 0
+move r9 0
+add r7 r9 179.5
+j 5
+l r14 d0 SignalID
+beq r14 -1 ra
+l r0 d0 InterrogationProgress
+blt r0 0 ra
+beq r0 1 ra
+move r6 ra
+jal 118
+beqz r0 r6
+get r0 db r13
+beq r0 r14 r6
+j 46
+l r0 d0 Horizontal
+l r1 d0 Vertical
+max r1 r1 10
+s d0 BestContactFilter r14
+s d0 Setting 50000
+yield
+s d0 Horizontal r0
+s d0 Vertical r1
+move r10 0.8
+l r11 d0 Vertical
+slt r11 r11 45
+select r11 r11 0.4 -0.4
+brdns d4 2
+s d4 Setting STR("MEASR")
+move r12 0
+jal 108
+l r0 d0 MinimumWattsToContact
+ble r0 50000 67
+l r13 d0 ContactSlotIndex
+put db r13 r14
+j 5
+l r1 d0 WattsReachingContact
+bge r1 r0 84
+jal 95
+mul r10 r10 -0.5
+blt r12 9 61
+s d5 Setting 1
+yield
+l r0 d5 Setting
+bnez r0 73
+brdns d4 2
+s d4 Setting STR("ALIGN")
+get r0 d5 0
+s d0 Horizontal r0
+get r0 d5 1
+s d0 Vertical r0
+jal 108
+bgt r15 2 46
+brdns d4 2
+s d4 Setting STR("INTRGT")
+s d0 Activate 1
+yield
+jal 118
+beqz r0 5
+l r0 d0 InterrogationProgress
+blt r0 0 5
+beq r0 1 5
+j 87
+j 5
+l r0 d0 Horizontal
+put d5 r12 r0
+add r12 r12 1
+add r0 r0 r10
+s d0 Horizontal r0
+l r0 d0 Vertical
+put d5 r12 r0
+add r12 r12 1
+add r0 r0 r11
+s d0 Vertical r0
+put d5 r12 r15
+add r12 r12 1
+j ra
+move r6 ra
+jal 118
+move ra r6
+beqz r0 5
+yield
+l r15 d0 SignalStrength
+l r14 d0 SignalID
+beq r14 -1 5
+beq r15 -1 108
+j ra
+l r13 d0 ContactSlotIndex
+l r0 d1 Setting
+l r1 d2 Setting
+select r0 r2 r0 r1
+sle r2 r13 2
+j ra
