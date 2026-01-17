@@ -1,4 +1,4 @@
-Stationeer Medium Dish Triangulator
+Stationeers Medium Dish Triangulator
 
 This is an IC10 module that takes three measurements (H/V/Error), and triangulates the H/V setting required to point to the target.
 
