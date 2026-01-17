@@ -11,7 +11,7 @@ s d0 Horizontal r9
 s d0 Vertical r8
 s d0 Setting 525
 yield
-jal 35
+jal 34
 l r0 d0 Idle
 beqz r0 11
 s d0 Horizontal r7
@@ -19,15 +19,14 @@ brdns d4 2
 s d4 Setting STR("SWEEP")
 s d0 Setting 525
 yield
-jal 35
+jal 34
 jal 24
 j 17
 l r9 d0 Horizontal
 l r8 d0 Vertical
 l r0 d0 Idle
 beqz r0 ra
-bap r9 180 0.1 33
-sweep_step_v:
+bap r9 180 0.1 32
 add r8 r8 -25
 bltz r8 0
 move r9 0
@@ -39,11 +38,11 @@ l r0 d0 InterrogationProgress
 blt r0 0 ra
 beq r0 1 ra
 move r6 ra
-jal 118
+jal 117
 beqz r0 r6
 get r0 db r13
 beq r0 r14 r6
-j 46
+j 45
 l r0 d0 Horizontal
 l r1 d0 Vertical
 max r1 r1 10
@@ -59,39 +58,39 @@ select r11 r11 0.4 -0.4
 brdns d4 2
 s d4 Setting STR("MEASR")
 move r12 0
-jal 108
+jal 107
 l r0 d0 MinimumWattsToContact
-ble r0 7500 67
+ble r0 7500 66
 l r13 d0 ContactSlotIndex
 put db r13 r14
 j 5
 l r1 d0 WattsReachingContact
-bge r1 r0 84
-jal 95
+bge r1 r0 83
+jal 94
 mul r10 r10 -0.5
-blt r12 9 61
+blt r12 9 60
 s d5 Setting 1
 yield
 l r0 d5 Setting
-bnez r0 73
+bnez r0 72
 brdns d4 2
 s d4 Setting STR("ALIGN")
 get r0 d5 0
 s d0 Horizontal r0
 get r0 d5 1
 s d0 Vertical r0
-jal 108
-bgt r15 2 46
+jal 107
+bgt r15 2 45
 brdns d4 2
 s d4 Setting STR("INTRGT")
 s d0 Activate 1
 yield
-jal 118
+jal 117
 beqz r0 5
 l r0 d0 InterrogationProgress
 blt r0 0 5
 beq r0 1 5
-j 87
+j 86
 j 5
 l r0 d0 Horizontal
 put d5 r12 r0
@@ -107,14 +106,14 @@ put d5 r12 r15
 add r12 r12 1
 j ra
 move r6 ra
-jal 118
+jal 117
 move ra r6
 beqz r0 5
 yield
 l r15 d0 SignalStrength
 l r14 d0 SignalID
 beq r14 -1 5
-beq r15 -1 108
+beq r15 -1 107
 j ra
 l r13 d0 ContactSlotIndex
 l r0 d1 Setting
