@@ -45,6 +45,7 @@ init_sweep:
 
   # Restart the last sweep from the same position
   init_wait_loop:
+    s dish Setting SWEEP_POWER
     yield
     jal check_contact
     l r0 dish Idle
