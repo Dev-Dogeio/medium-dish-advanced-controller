@@ -11,7 +11,7 @@ define MIN_VERTICAL 10 # minimum vertical angle to ensure stable triangulation r
 define MAX_ITRG_ERR 2  # maximum acceptable interrogation error (at 2 degrees, max power is reaching target)
 
 define SWEEP_POWER 525
-define ITRG_POWER 50000
+define ITRG_POWER 7500
 
 define V_START 77.5
 define V_STEP -25
