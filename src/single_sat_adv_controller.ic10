@@ -64,9 +64,6 @@ init_sweep:
 sweep:
   l sweepLastH dish Horizontal
   l sweepLastV dish Vertical
-
-  # If the dish has scanned atleast once at the 2.5 degree position, we skip the remaining 360 degree scan
-  bap sweepLastV 2.5 0.2 init
   
   # If dish is not idle, it's still sweeping, so early-exit
   l r0 dish Idle
