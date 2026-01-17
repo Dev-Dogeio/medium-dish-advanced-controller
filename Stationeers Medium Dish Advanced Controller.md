@@ -16,10 +16,11 @@ Behavior:
 - The controller performs layered sweeps: vertical steps with full horizontal rotations between steps.
 - The controller will avoid triangulating a signal if it can be scanned without it (enough power reaching target).
 
-
 Notes:
 - Only ~25% of the "big" traders contacts have higher power requirements than medium dishes can handle. (~75% can be scanned)
 - The script requires minification to fit within IC10 size limits, source code can be found in the repository.
+
+Github Repository: https://github.com/Dev-Dogeio/medium-dish-advanced-controller
 
 License & credits
 Use, modify, and republish freely *with credit*!

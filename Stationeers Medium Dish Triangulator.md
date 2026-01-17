@@ -14,7 +14,9 @@ Notes:
   A minimum of 5~10 degrees Vertical is recommended for accurate results.
 - The script requires minification to fit within IC10 size limits, source code can be found in the repository.
 
+Github Repository: https://github.com/Dev-Dogeio/medium-dish-advanced-controller
+
 License & credits
 Use, modify, and republish freely *with credit*!
 
-Made by Doggo
+Made by Doggo​
