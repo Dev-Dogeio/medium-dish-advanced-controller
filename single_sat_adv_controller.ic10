@@ -1,0 +1,255 @@
+alias dish d0
+alias scanSmallSwitch d1
+alias scanBigSwitch d2
+alias display d4
+alias triangulator d5
+
+define PANH 0.8        # initial pan h value 
+define PANV 0.4        # initial pan v value
+define NPANV -0.4      # negative initial pan y value
+define MIN_VERTICAL 10 # minimum vertical angle to ensure stable triangulation readings
+define MAX_ITRG_ERR 2  # maximum acceptable interrogation error (at 2 degrees, max power is reaching target)
+
+define SWEEP_POWER 525
+define ITRG_POWER 50000
+
+define V_START 77.5
+define V_STEP -25
+define H_STEP 179.5
+
+alias era r6
+alias sweepTargetH r7
+alias sweepLastV r8
+alias sweepLastH r9
+alias panh r10
+alias panv r11
+alias t r12
+alias slotIndex r13
+alias signalID r14
+alias e r15
+
+init:
+brdns display 2
+s display Mode 10
+move sweepLastH 0
+move sweepLastV V_START
+move sweepTargetH H_STEP
+
+init_sweep:
+  brdns display 2
+  s display Setting STR("RESET")
+  s dish Activate 0
+  s dish BestContactFilter -1
+  s dish Horizontal sweepLastH
+  s dish Vertical sweepLastV
+
+  # Restart the last sweep from the same position
+  init_wait_loop:
+    yield
+    jal check_contact
+    l r0 dish Idle
+  beqz r0 init_wait_loop
+  s dish Horizontal sweepTargetH
+
+  sweep_loop:
+    brdns display 2
+    s display Setting STR("SWEEP")
+    s dish Setting SWEEP_POWER
+    yield
+    jal check_contact
+    jal sweep
+  j sweep_loop
+
+# Will sweep the dish
+sweep:
+  l sweepLastH dish Horizontal
+  l sweepLastV dish Vertical
+
+  # If the dish has scanned atleast once at the 2.5 degree position, we skip the remaining 360 degree scan
+  bap sweepLastV 2.5 0.2 init
+  
+  # If dish is not idle, it's still sweeping, so early-exit
+  l r0 dish Idle
+  beqz r0 ra
+
+  # If the dish is idle, detect which part of the sweep it's at
+  # If H ~= 180 then we need to keep going with the horizontal rotation
+  bap sweepLastH 180 0.1 sweep_continue_h
+  sweep_step_v: # Else we need to step vertically
+    add sweepLastV sweepLastV V_STEP
+
+    # If we've reached the vertical limit, reset
+    bltz sweepLastV init
+  
+    # Else init the next vertical sweep (sweepLastV already set)
+    # We fall through to sweep_continue_h to set horizontal value
+    # add sweepTargetH sweepLastH H_STEP
+    # j init_sweep
+    move sweepLastH 0 # Reset horizontal to 0 for next vertical sweep
+  sweep_continue_h:
+    add sweepTargetH sweepLastH H_STEP
+    j init_sweep
+
+# Check if there is a non-interrogated contact that we want to scan
+check_contact:
+  l signalID dish SignalID
+  beq signalID -1 ra
+
+  l r0 dish InterrogationProgress
+  blt r0 0 ra
+  beq r0 1 ra
+
+  move era ra
+  # Check if we want to interrogate this SignalID (scan switches)
+  jal is_target_wanted
+  beqz r0 era
+
+  # Check if the blacklist contains this SignalID (too high power requirement)
+  get r0 db slotIndex
+  beq r0 signalID era
+
+  # Begin interrogation
+  j interrogate
+
+# Will triangulate the current BestContactFilter SignalID and interrogate it
+interrogate:
+  # Initialize dish for interrogation
+  l r0 dish Horizontal
+  l r1 dish Vertical
+  max r1 r1 MIN_VERTICAL
+  s dish BestContactFilter signalID
+  s dish Setting ITRG_POWER
+  yield
+  s dish Horizontal r0
+  s dish Vertical r1
+
+  # Initialize pan values
+  move panh PANH
+  l panv dish Vertical
+  slt panv panv 45
+  select panv panv PANV NPANV
+
+  # Write 3 measurements to triangulator
+  brdns display 2
+  s display Setting STR("MEASR")
+  move t 0
+  measure_loop:
+    # Load error and abort if signal lost
+    jal wait_stable
+
+    # Verify that the max power requirement is < ITRG_POWER
+    l r0 dish MinimumWattsToContact
+    ble r0 ITRG_POWER continue_measure
+
+    # Store SignalID to ContactSlotIndex on the stack (power required blacklist)
+    l slotIndex dish ContactSlotIndex
+    put db slotIndex signalID
+    j init_sweep
+
+    continue_measure:
+    # If current wattage is high enough, skip to interrogation directly
+    l r1 dish WattsReachingContact
+    bge r1 r0 interrogate_signal
+
+    # Measure and store h/v/e into triangulator
+    jal measure
+
+    # Change pan direction and decrease magnitude for more accurate measurements
+    mul panh panh -0.5
+  blt t 9 measure_loop
+
+  # Request calculation
+  s triangulator Setting 1
+
+  # Wait for calculation to complete
+  waitloop:
+    yield
+    l r0 triangulator Setting
+  bnez r0 waitloop
+
+  brdns display 2
+  s display Setting STR("ALIGN")
+  # Move the dish to the calculated position
+  get r0 triangulator 0
+  s dish Horizontal r0
+  get r0 triangulator 1
+  s dish Vertical r0
+
+  # Wait until dish is stable
+  jal wait_stable
+
+  # If error is too high, triangulate again
+  bgt e MAX_ITRG_ERR interrogate
+
+  interrogate_signal:
+  # Interrogate the signal
+  brdns display 2
+  s display Setting STR("INTRGT")
+  s dish Activate 1
+  interrogate_loop:
+    yield
+
+    # Check if we still want to interrogate this target
+    jal is_target_wanted
+    beqz r0 init_sweep
+
+    # Exit loop when progress < 0 (signal lost), or progress == 1 (interrogation complete)
+    l r0 dish InterrogationProgress
+    blt r0 0 init_sweep
+    beq r0 1 init_sweep
+  j interrogate_loop
+j init_sweep
+
+# Will measure the dish h/v/e values and write them to the triangulator stack at (t+0, t+1, t+2)
+# Assumes `wait_stable` has been called before this to ensure stable signal
+measure:
+  # Measure and pan H/V, storing to the triangulator
+  l r0 dish Horizontal
+  put triangulator t r0
+  add t t 1
+
+  add r0 r0 panh
+  s dish Horizontal r0
+
+  l r0 dish Vertical
+  put triangulator t r0
+  add t t 1
+
+  add r0 r0 panv
+  s dish Vertical r0
+
+  put triangulator t e
+  add t t 1
+j ra
+
+# Will wait until dish is stable
+wait_stable:
+  move era ra
+  # Check if we still want to interrogate this target
+  jal is_target_wanted
+  move ra era
+  beqz r0 init_sweep
+
+  yield
+  # Load error into e
+  l e dish SignalStrength
+
+  # Check if contact has been lost
+  l signalID dish SignalID
+
+  # If signal is lost, abort
+  beq signalID -1 init_sweep
+
+  # If e == -1 && SignalID != -1, signal is stable but not yet scanned
+  beq e -1 wait_stable
+j ra
+
+# Check if we want to interrogate this SignalID (scan switches)
+# Also loads slotIndex
+is_target_wanted:
+  l slotIndex dish ContactSlotIndex
+  l r0 scanSmallSwitch Setting
+  l r1 scanBigSwitch Setting
+  select r0 r2 r0 r1
+  sle r2 slotIndex 2 # small switch controls slots 0, 1, 2, big switch controls slots 3, 4
+j ra
