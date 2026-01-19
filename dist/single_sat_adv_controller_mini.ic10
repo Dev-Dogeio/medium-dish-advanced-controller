@@ -118,6 +118,6 @@ j ra
 l r13 d0 ContactSlotIndex
 l r0 d1 Setting
 l r1 d2 Setting
-select r0 r2 r0 r1
 sle r2 r13 2
+select r0 r2 r0 r1
 j ra

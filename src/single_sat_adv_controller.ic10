@@ -248,6 +248,6 @@ is_target_wanted:
   l slotIndex dish ContactSlotIndex
   l r0 scanSmallSwitch Setting
   l r1 scanBigSwitch Setting
-  select r0 r2 r0 r1
   sle r2 slotIndex 2 # small switch controls slots 0, 1, 2, big switch controls slots 3, 4
+  select r0 r2 r0 r1
 j ra
